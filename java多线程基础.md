@@ -1,6 +1,8 @@
 
   java多线程基础
 ====
+# 前期知识Lamda表达式
+![头像](https://https://github.com/diligentpeng/javaStudy/blob/master/images/lamda.PNG)
 
 # 一：概念
 
