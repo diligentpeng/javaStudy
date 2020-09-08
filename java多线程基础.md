@@ -2,7 +2,80 @@
   java多线程基础
 ====
 # 前期知识Lamda表达式
-![头像](https://https://github.com/diligentpeng/javaStudy/blob/master/images/lamda.PNG)
+![lamda表达式](https://github.com/diligentpeng/javaStudy/blob/master/images/lamda.PNG)
+
+Lambda表达的标准格式：  
+> 由三部分组成：a：一些参数     b：一个箭头     c:一段代码
+>    格式：
+>        （参数列表）-> {一些重写方法的代码}；
+>    解释说明格式：
+>        a：（）：接口中的抽象方法的参数列表，没有参数，就为空，有参数就写出参数，多个参数使用逗号隔开
+>        b： -> ：传递的意思，把参数传递给方法体
+>        c：{ } ：重写接口抽象方法的方法体
+
+```
+    例子：
+    import java.util.Arrays;
+    import java.util.Comparator;
+
+    class Person {
+        private String name;
+        private int age;
+
+        //有参和无参构造方法
+        public Person0() {
+        }
+        public Person0(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "Person0{" +
+                    "name='" + name + '\'' +
+                    ", age=" + age +
+                    '}';
+        }
+    }
+    public class LambdaTest {
+        public static void main(String[] args) {
+            //创建数组存储多个Person对象
+            Person0[] arr = {new Person0("小明", 20),
+                    new Person0("小红", 19),
+                    new Person0("小亮", 21)
+            };
+            //对数组中的Person对象使用Arrays的sort方法通过年龄进行升序（前-后）
+            Arrays.sort(arr, new Comparator<Person>() {
+                @Override
+                public int compare(Person0 o1, Person0 o2) {
+                    return o1.getAge() - o2.getAge();
+                }
+            });
+            //遍历数组
+            for (Person0 p : arr) {
+                System.out.println(p);
+            }//Person0{name='小红', age=19} Person0{name='小明', age=20} Person0{name='小亮', age=21}
+
+            //使用Lambda简化对象
+            Arrays.sort(arr,(Person0 o1,Person0 o2)->{
+                return o2.getAge()-o1.getAge();
+            });
+            //遍历数组
+            for (Person0 p : arr) {
+                System.out.println(p);
+            }//Person0{name='小亮', age=21}  Person0{name='小明', age=20} Person0{name='小红', age=19}
+        }
+    }
+'''
+
 
 # 一：概念
 
