@@ -123,3 +123,129 @@ new 父类名称（）{  //第二种：直接通过new的对象使用该子类�
 
 # Lamda表达式
 ![Lamda表达式](https://github.com/diligentpeng/javaStudy/blob/master/images/lamda.PNG)
+
+## 一：Lambda表达的标准格式：
+```
+    由三部分组成：a：一些参数     b：一个箭头     c:一段代码
+    格式：
+        （参数列表）-> {一些重写方法的代码}；
+    解释说明格式：
+        a：（）：接口中的抽象方法的参数列表，没有参数，就为空，有参数就写出参数，多个参数使用逗号隔开
+        b： -> ：传递的意思，把参数传递给方法体
+        c：{ } ：重写接口抽象方法的方法体
+```
+
+例子1：
+```
+    //定义一个接口
+    interface Cook{
+        //接口中有一个抽象方法
+        void makeFood();
+    }
+    public class LambdaTest {
+        public static void main(String[] args) {
+            //调用invokCook方法，参数是Cook接口，传递Cook接口的匿名内部类对象
+            invokeCook(new Cook() {
+                @Override
+                public void makeFood() {
+                    System.out.println("吃饭");
+                }
+            });
+            //使用Lambda表达式，简化匿名内部类的书写
+            invokeCook(()->{
+                System.out.println("lambda吃饭");
+            });
+        }
+        //定义一个方法，参数传递Cook接口，方法内部调用Cook接口中的方法makeFood
+        public static void invokeCook (Cook cook){
+            cook.makeFood();
+        }
+    }
+```
+
+例子2：
+```
+    import java.util.Arrays;
+    import java.util.Comparator;
+
+    class Person0 {
+        private String name;
+        private int age;
+
+        //有参和无参构造方法
+        public Person0() {
+        }
+
+        public Person0(String name, int age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        //get方法
+
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "Person0{" +
+                    "name='" + name + '\'' +
+                    ", age=" + age +
+                    '}';
+        }
+    }
+    public class LambdaTest {
+        public static void main(String[] args) {
+            //创建数组存储多个Person对象
+            Person0[] arr = {new Person0("小明", 20),
+                    new Person0("小红", 19),
+                    new Person0("小亮", 21)
+            };
+            //对数组中的Person对象使用Arrays的sort方法通过年龄进行升序（前-后）
+            Arrays.sort(arr, new Comparator<Person0>() {
+                @Override
+                public int compare(Person0 o1, Person0 o2) {
+                    return o1.getAge() - o2.getAge();
+                }
+            });
+            //遍历数组
+            for (Person0 p : arr) {
+                System.out.println(p);
+            }//Person0{name='小红', age=19} Person0{name='小明', age=20} Person0{name='小亮', age=21}
+
+            //使用Lambda简化对象
+            Arrays.sort(arr,(Person0 o1,Person0 o2)->{
+                return o2.getAge()-o1.getAge();
+            });
+            //遍历数组
+            for (Person0 p : arr) {
+                System.out.println(p);
+            }//Person0{name='小亮', age=21}  Person0{name='小明', age=20} Person0{name='小红', age=19}
+        }
+    }
+```
+
+##  二：Lambda省略格式（可推导即可省略）
+```
+ 凡是根据上下文推导出来的内容，都可以省略书写
+ 可以省略的内容：
+    1：（参数列表）：括号中的参数列表的数据类型，可以省略不写
+    2：（参数列表）：括号中的参数如果只有一个，那么类型和（）都可以省略
+    3： { 代码体 } ：如果{ }中的代码只有一行，无论是否有返回值，都可以省略（{},return,分号）
+                     注意：如果要省略{ }，return，分号，它们就必须一起被省略，没有返回值就把
+                           { }和分号一起省略
+``
+
+## 三：Lambda的使用前提：
+
+* 1. 使用Lambda必须具有接口，且要求接口中有且仅有一个抽象方法。  
+    无论是JDK内置的 Runnable 、 Comparator 接口还是自定义的接口，只有当接口中的抽象方法存在且唯一 时，才可以使用Lambda。  
+* 2. 使用Lambda必须具有上下文推断。 也就是方法的参数或局部变量类型必须为Lambda对应的接口类型，才能使用Lambda作为该接口的实例。  
+* 3：备注：有且仅有一个抽象方法的接口，称为“函数式接口”。  
+
