@@ -78,7 +78,7 @@ public class NewThread extends Thread {
 }
 
 ```
-> **过程接受：JVM执行main方法，栈OS开辟一条main方法通向cpu的路径，这个路径叫main线程，主线程，cpu通过这个线程可以执行main方法。 newThread.start();开会开辟一条新的通往cpu的路径（开辟了一个新的栈空间在新的栈空间中执行run方法）。对cpu来说：就有了两条执行的路径，两个线程，一个main线程，一个新线程一起抢夺cpu的执行权（执行时间），谁抢到就执行谁的代码**
+> **过程解释：JVM执行main方法，栈OS开辟一条main方法通向cpu的路径，这个路径叫main线程，主线程，cpu通过这个线程可以执行main方法。 newThread.start();开会开辟一条新的通往cpu的路径（开辟了一个新的栈空间在新的栈空间中执行run方法）。对cpu来说：就有了两条执行的路径，两个线程，一个main线程，一个新线程一起抢夺cpu的执行权（执行时间），谁抢到就执行谁的代码**
 
 * 第二种：实现Runnable接口
 **注意开启线程的方式和继承Thread类的方式不一样**
