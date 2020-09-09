@@ -857,6 +857,7 @@ wait方法必须在synchronized方法或者代码块中调用。
 * 生产线加工生产汽车；
 * 4s店存放生产的汽车，最多存放4量汽车，如果达到4量就停止生产；
 * 消费者在4s店购买汽车，如果4s店没有库存，则消费者需等待购买；
+```java
 public class Main{
     private static int CAR_NAME = 1;
     
@@ -936,3 +937,4 @@ public class Main{
         //getter/setter
     }
 }
+```
