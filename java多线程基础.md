@@ -112,12 +112,76 @@ public class RunnableDemo01{
 * 第三种：通过ExcutorService和Callable实现有返回值的线程；
 Callable可以实现有返回值的线程（了解即可） 
 
+## 用户线程与守护线程
+java分两种线程：用户线程和守护线程。
 
-## 2.3：线程的状态
+> 守护线程是指程序运行时在后台提供的一种通用服务的线程，比如垃圾回收GC，这种线程并不属于程序不可或缺的部分。
+> 
+> 当Java程序启动后会开启一个JVM进程，JVM进程中有两类线程，用户线程和守护线程，当用户线程执行结束JVM进程也就结束了，不管守护线程是否执行完毕。
+> 
+> 比如GC，GC作为守护进程在JVM进程中一直存在，当用户线程运行完毕后，剩下GC等守护进程，JVM也会退出。
+> **要设置线程为守护线程，需要在start()前调用setDaemon(true)**
+```java
+public static void main(String [] args){
+    Thread t1 = new Thread(()->{
+        for(int i=0; i<100; i++){
+            try{
+                Thread.sleep(200);
+                System.out.println("t1输出："+ i);
+            }catch(InterruptedException e){
+                e.printStack();
+            }
+        }
+    });
+    t1.setDaemon(true);
+    t1.start();
+    Thread t2 = new Thread(()->{
+        for(int i=0; i<100; i++){
+            try{
+                Thread.sleep(50);
+                System.out.println("t2输出："+ i);
+            }catch(InterruptedException e){
+                e.printStack();
+            }
+        }
+    });
+    t2.start()
+}
+```
+
+## 2.3：线程的优先级
+
+线程的切换是由线程调度器控制的，程序员无法通过代码干涉，但是可以通过提高线程的优先级来最大程度的改善线程获取时间片的几率。
+
+线程的优先级被划分为10级，值分别i为1-10，其中1最低，10最高。线程提供了三个常量来表示最低、最高和默认优先级：
+ * Thread.MIN_PRIORITY 1
+ * Thread.MAX_PRIORITY 10
+ * Thread.NORM_PRIORITY 5
+ 
+**线程对象通过setPriority()来设置线程优先级。其值默认是5**
+
+### 线程常用API
+
+|常用线程api方法||
+|--|--|
+|start()|启动线程|
+|getID()|获取当前线程ID Thread-编号 该编号从0开始|
+|getName()|获取当前线程的名称|
+|Stop()|停止线程（已废弃可以自己覆盖重写）|
+|getPriority()/setPriority()|返回线程的优先级|
+|boolean isAlive()|	测试线程是否处于活动状态|
+|isDaemon() / setDaemon()|测试线程是否为守护线程|
+|isInterrupted()|测试线程是否已经中断,没有调用interrupt()返回false，否则返回true|
+|interrupt()|	线程中断，代替stop()|
+|Thread.currentThread()|**静态方法** 获取当前线程对象|
+|Thread.getState()|**静态方法** 	State为Thread的内部成员枚举类，获取线程的状态,对应线程的生命周期，可以使用Thread.Stata 对象名 接受返回的Stata对象|
+## 2.4：线程的状态
 
 ![线程状态图](https://github.com/diligentpeng/javaStudy/blob/master/images/ThreadStatus.PNG)
 
-**线程有六种状态（生命周期）：NEW(新建)，Runnable(可运行)，Blocked(锁阻塞)，Waiting(无限等待)，Timed Waiting(计时等待)，Teminated(被终止)**
+**注意图中的就绪态和运行态都属于Runnable(可运行)**
+
+**Thread源码中枚举类定义线程有六种状态（生命周期）：NEW(新建)，Runnable(可运行)，Blocked(锁阻塞)，Waiting(无限等待)，Timed Waiting(计时等待)，Teminated(被终止)**
 
  * NEW new Thread()，尚未执行；
  * RUNNABLE start()就绪后抢夺时间片，正在执行run()
@@ -126,7 +190,10 @@ Callable可以实现有返回值的线程（了解即可）
  * TIMED_WAITING 调用sleep()方法状态
  * TERMINATED run()执行完毕，进入销毁状态
  
- ![线程状态](https://github.com/diligentpeng/javaStudy/blob/master/images/Thread_state3.jpg)
+ 
+ ![线程状态转换](https://github.com/diligentpeng/javaStudy/blob/master/images/Thread_state3.jpg)
+ 
+ 
  
  ![重写线程的stop方法](https://github.com/diligentpeng/javaStudy/blob/master/images/stopThread.JPG)
 
