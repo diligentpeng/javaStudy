@@ -117,9 +117,10 @@ java分两种线程：用户线程和守护线程。
 > 正常的线程都是用户线程（main线程，自己开启的线程等）
 > 守护线程是指程序运行时在后台提供的一种通用服务的线程，比如垃圾回收GC，这种线程并不属于程序不可或缺的部分。
 > 
-> 当Java程序启动后会开启一个JVM进程，JVM进程中有两类线程，用户线程和守护线程，当用户线程执行结束JVM进程就停止了（停止可能还会需要一点时间，这段时间类守护线程还会执行一下），不管守护线程是否执行完毕。
+> 当Java程序启动后会开启一个JVM进程，JVM进程中有两类线程，用户线程和守护线程，当用户线程执行结束JVM进程就停止了（停止可能还会需要一点时间，这段时间类守护线程还会执行一下），不管守护线程是否执行完毕(虚拟机不用等待守护线程执行完毕)。
 > 
 > 比如GC，GC作为守护进程在JVM进程中一直存在，当用户线程运行完毕后，剩下GC等守护进程，JVM也会退出。
+>
 > **要设置线程为守护线程，需要在start()前调用setDaemon(true)**
 ```java
 public static void main(String [] args){
@@ -204,7 +205,174 @@ public static void main(String [] args){
  **死亡之后的线程不能再次启动（同一个线程不能启动两次）**
  ![线程状态转换](https://github.com/diligentpeng/javaStudy/blob/master/images/Thread_state3.jpg)
  
- 
- 
+## 2.5：线程常用API
+## 2.5.1 sleep()方法
+让线程休眠一段时间，让其他线程执行任务，但不会释放锁，如果有synchronized同步代码块，其他线程并不能访问这个共享数据。
 
+## 2.5.2 yield()方法
+让出本次线程占有cpu时间片，参与下一次竞争，只会给相同或更高优先级的线程以运行机会。
+
+**sleep和yield方法的区别**
+> 1. sleep()方法给其他线程运行机会时不考虑线程的优先级，因此会给低优先级的线程以运行机会；
+> 2. yield()方法只会给相同优先级或更高优先级的线程以运行机会；
+> 3. 线程执行sleep()方法后转入阻塞（blocked）状态，而执行yield()方法后会转入就绪（ready）状态；
+> 4. **sleep()方法声明会抛出InterruptedException**，而yield()方法没有声明任何异常；
+> 5. sleep()方法比yield()方法具有更好的移植性(跟操作系统cpu调度相关)；
+
+## 2.5.3 join()方法
+Thread的join方法：线程等待  
+线程调用了join方法，那么就要一直运行到该线程运行结束，才会运行其他线程，这样可以控制线程执行顺序。 
+join方法可以传递参数，join(10)表示main线程会等待t1线程10毫秒，10毫秒过去后，ain线程和t1线程之间执行顺序由串行执行变为普通的并行执行
+
+```
+A{
+
+  B.join()；//让b线程先执行
+
+  --> 等待b线程执行完毕再接着执行
+
+}
+```
+面试题：现在有t1、t2、t3三个线程，你怎么保证t2再t1执行完后再执行，t3在t2执行完后再执行。
+```java
+
+public class JoinTestSync {
+ 
+	public static void main(String[] args) throws InterruptedException {
+		// TODO Auto-generated method stub
+		ThreadJoinTest1 t1 = new ThreadJoinTest1("今天");
+		ThreadJoinTest1 t2 = new ThreadJoinTest1("明天");
+		ThreadJoinTest1 t3 = new ThreadJoinTest1("后天");
+		/*
+		 * 通过join方法来确保t1、t2、t3的执行顺序
+		 * */
+		t1.start();
+		t1.join();	
+		t2.start();
+		t2.join();
+		t3.start();
+		t3.join();
+	}
+ 
+}
+class ThreadJoinTest1 extends Thread{
+    public ThreadJoinTest1(String name){
+        super(name);
+    }
+    @Override
+    public void run(){
+        for(int i=0;i<5;i++){
+            System.out.println(this.getName() + ":" + i);
+        }
+    }
+}
+```
+**主要使用的join方法实现，直到当前线程执行完才会唤醒其他线程继续执行  **  
+
+## 2.5.4 中断线程
+* 1：使用退出标志
+当run方法执行完后，线程就会退出。但有时run方法是永远不会结束的，如在服务端程序中使用线程进行监听客户端请求，或是其他的需要循环处理的任务。
+
+在这种情况下，一般是将这些任务放在一个循环中，如while循环。如果想使while循环在某一特定条件下退出，最直接的方法就是设一个boolean类型的标志，并通过设置这个标志为true或false来控制while循环是否退出。  
+···java
+public class test1 {
+
+    public static volatile boolean exit =false;  //退出标志
+    
+    public static void main(String[] args) {
+        new Thread() {
+            public void run() {
+                System.out.println("线程启动了");
+                while (!exit) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                System.out.println("线程结束了");
+            }
+        }.start();
+        
+        try {
+            Thread.sleep(1000 * 5);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        exit = true;//5秒后更改退出标志的值,没有这段代码，线程就一直不能停止
+    }
+}
+
+···
+* 2：interrupted() 和 isInterrupted()来中断线程　
+
+Thread.interrupt()方法: 作用是中断线程。将会设置该线程的中断状态位，即设置为true，中断的结果线程是死亡、还是等待新的任务或是继续运行至下一步，就取决于这个程序本身。线程会不时地检测这个中断标示位，以判断线程是否应该被中断（中断标示值是否为true）。它并不像stop方法那样会中断一个正在运行的线程  　
+isInterrupted():测试线程是否已经中断，但是不能清除状态标识
+
+**interrupt()方法只是改变中断状态，不会中断一个正在运行的线程。**需要用户自己去监视线程的状态为并做处理。支持线程中断的方法（也就是线程中断后会抛出interruptedException的方法）就是在**监视线程的中断状态，一旦线程的中断状态被置为“中断状态”，就会抛出中断异常。**这一方法实际完成的是，给受阻塞的线程发出一个中断信号，这样受阻线程检查到中断标识，就得以退出阻塞的状态。
+
+更确切的说，如果某个线程被Object.wait, Thread.join和Thread.sleep三种方法之一阻塞，此时调用该线程的interrupt()方法，那么被阻塞该线程将抛出一个 InterruptedException中断异常（该线程必须事先预备好处理此异常），从而提早地终结被阻塞状态。如果线程没有被阻塞，这时调用 interrupt()将不起作用，直到执行到wait(),sleep(),join()时,才马上会抛出 InterruptedException。
+其他线程对目标线程调用interrupt()方法，目标线程需反复检查自身状态，如果isInterrupt则结束执行。
+```java
+public class Main{
+    public static void main(String[] args){
+        Thread t = new Thread(()->{
+            int n = 0;
+            while(!isInterrupt()){ //调用 interrupt 之后为true
+                n++;
+                System.out.println(n);
+            }
+        });
+        t.start();
+        Thread.sleep(1);
+        t.interrupt();	//中断t线程
+        //t.join()会让main线程处于等待状态，如果此时对main线程调用interrupt()，  join()方法就会立刻抛出InterruptedException。
+        //因此，目标线程只要捕获到join抛出的InterruptedException就说明有其他线程对其调用了interrupt()方法，通常情况下该线程就应该立刻结束。
+        t.join();	//等待t线程结束
+        System.out.print("end");
+    }
+}
+
+join()抛出InterruptedException处理
+
+```java
+public class Main{
+    public static void main(String[] args){
+        Thread t = new MyThread();
+        t.start();
+        Thread.sleep(1000);
+        t.interrupt();	//中断
+        t.join();		//等待t线程结束
+        System.out.println("end");
+    }
+}
+class MyThread extends Thread{
+    public void run(){
+        Thread hello = new HelloThread();
+        hello.start();
+        try{
+            hello.join();    //当 t.interrupt()被中断时，t线程中的阻塞会抛出异常
+        }catch(InterruptException e){
+            System.out.println("interrupted!");
+        }
+        hello.interrupt();//中断线程
+    }
+}
+class HelloThread extends Thread{
+    public void run(){
+        int n =0;
+        while(!isInterrupted()){   //hello.interrupt()被中断后，线程hello的isInterrupted()为true
+            n++;
+            System.out.println(n);
+            try{
+                Thread.sleep(100);
+            }catch(InterruptException e){
+                break;
+            }
+        }
+    }
+}
+```java
+
+# 三：并发编程之线程安全
 
