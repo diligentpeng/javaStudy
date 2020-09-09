@@ -111,6 +111,7 @@ public class RunnableDemo01{
 ```
 * 第三种：通过ExcutorService和Callable实现有返回值的线程；
 Callable可以实现有返回值的线程（了解即可） 
+
 * 第四种：使用线程池
 ```
 线程池：其实就是一个容纳多个线程的容器，其中的线程可以反复使用，省去了频繁创建线程对象的操作，
@@ -750,4 +751,188 @@ if(lock.tryLock(1,TimeUnit.SECONDS)){
 |--|--|--|
 |读	|允许	|不允许|
 |	写|	不允许|不允许|
-		
+
+使用ReadWriteLock可以解决这个问题，它保证：
+
+* 只允许一个线程写入（其他线程既不能写入也不能读取）；
+* 没有写入时，多个线程允许同时读（提高性能）。
+
+用ReadWriteLock实现这个功能十分容易。我们需要创建一个ReadWriteLock实例，然后分别获取读锁和写锁：
+```java
+public Class Counter{
+    private final ReadWriteLock rwlock = new ReentrantReadWriteLock();
+    private final Lock rlock = rwlock.readLock();
+    private final Lock wlock = rwlock.writeLock();
+    private int[] counts = new int[10];
+    
+    //写操作
+    public void inc(int index){
+        wlock.lock();	//加写锁
+        try{
+            counts[index] += 1;
+        }finally{
+            wlock.unlock();	//释放写锁
+        }
+    }
+    //读操作
+    public int[] get(){
+        rlock.lock();	//加读锁
+        try{
+            return Arrays.copyOf(counts,counts.length);
+        }finally{
+            rlock.unlock();//释放读锁
+        }
+    }
+} 
+```
+把读写操作分别用读锁和写锁来加锁，在读取时，多个线程可以同时获得读锁，这样就大大提高了并发读的执行效率。
+使用ReadWriteLock时，适用条件是同一个数据，有大量线程读取，但仅有少数线程修改。
+
+例如，一个论坛的帖子，回复可以看做写入操作，它是不频繁的，但是，浏览可以看做读取操作，是非常频繁的，这种情况就可以使用ReadWriteLock。
+
+**Lock与synchronized区别**
+Lock是一个接口，而synchronied时Java的一个关键字，synchronized时内置的语言实现；
+
+1. synchronized关键字可以直接修饰方法，也可以修饰代码块，而lock只能修饰代码块。
+
+2. synchronized在发生异常时，会自动释放线程占有的锁，一次不会导致死锁现象发生；而lock在发生异常时，如果没有主动通过unLock()去释放锁，则很可能会造成死锁现象，一次使用Lock时需要在finally块中释放锁。
+
+3. Lock可以让等待的线程响应中断，而synchronized却不行，使用synchronized时，等待线程会一直等待下去，不能够响应中断。
+
+4. 通过Lock可以知道有没有成功获取锁，而synchronized却无法办到。（提供tryLock）
+
+5. Lock可以提高多个线程进行读操作的效率（提供读写锁）；
+
+**从性能上说，如果竞争资源不激烈，两者的性能时差不多的，而当竞争资源非常激烈时（既有大量线程同时竞争），此时Lock的性能要远远由于synchronized。所以说，在具体使用时要根据情况选择**
+
+## 线程间的协作（wait/notify）
+什么是线程间通信
+
+多个线程在处理同一个资源，并且任务不同时，需要线程通信来帮助解决线程之间对同一个变量的使用或操作；
+
+于时Java提出了等待唤醒机制：Object类的固有方法：wait()/notify()或notifyAll()
+
+wait()、notify()、notifyAll()是三个定义在object类中的方法，可以用来控制线程的状态，这三个方法最终调用的是jvm级的native方法（有jvm的C代码实现）。随着jvm运行平台的不同可能有些差异。
+
+如果对象调用了wait()方法就会使持有该对象的线程把该对象的控制权交出去，然后处于等待状态。
+
+如果对象调用了notify方法就会通知某个正在等待这个对象的控制权的线程可以继续运行（唤醒哪个有一定的随机性），notifyAll会唤醒所有等待该对象控制权的线程。
+
+wait方法必须在synchronized方法或者代码块中调用。
+```
+笔记：等待唤醒机制
+多个线程并发执行时, 在默认情况下CPU是随机切换线程的，当我们需要多个线程来共同完成一件任务，并且我们希望他们有规律的执行,
+那么多线程之间需要一些协调通信，以此来帮我们达到多线程共同操作一份数据。
+
+多个线程在处理同一个资源，并且任务不同时，需要线程通信来帮助解决线程之间对同一个变量的使用或操作。 就 是多个线程在操作同一份数据时，
+避免对同一共享变量的争夺。也就是我们需要通过一定的手段使各个线程能有效的利用资源。而这种手段即—— 等待唤醒机制。
+
+1. wait：线程不再活动，不再参与调度，进入 wait set 中，因此不会浪费 CPU 资源，也不会去竞争锁了，
+        这时 的线程状态即是 WAITING。它还要等着别的线程执行一个特别的动作，也即是“通知（notify）”
+        在这个对象 上等待的线程从wait set 中释放出来，重新进入到调度队列（ready queue）中
+2. notify：则选取所通知对象的 wait set 中的一个线程释放；例如，餐馆有空位置后，等候就餐最久的顾客最先入座。
+3. notifyAll：则释放所通知对象的 wait set 上的全部线程。
+   注意： 哪怕只通知了一个等待的线程，被通知线程也不能立即恢复执行，因为它当初中断的地方是在同步块内，
+         而此刻它已经不持有锁，所以她需要再次尝试去获取锁（很可能面临其它线程的竞争），成功后才能在当初调 用 wait 方法之后的地方恢复执行。
+
+总结如下： 如果能获取锁，线程就从 WAITING 状态变成 RUNNABLE 状态；
+            否则，从 wait set 出来，又进入 entry set，线程就从 WAITING 状态又变成 BLOCKED 状态
+
+```
+
+**面试题：使用多线程实现生产消费者模式**
+1. 管程法：生产者+消费者+产品+缓冲区
+生产者消费者模式是并发，多线程编程中经典的设计模式，生产者和消费者通过分离的执行工作解耦，简化了开发模式，生产者和消费者可以以不同的速度生产和消费数据。
+
+生产者消费者模式的好处：
+
+1. 它简化了开发，你可以独立的或并发的编写消费者和生产者，它仅仅只需知道共享对象是谁；
+2. 生产者不需要知道谁是消费者或者有多少消费者，对消费者来说也是一样；
+3. 生产者和消费者可以以不同的速度执行；
+4. 分离的消费者和生产者在功能上能写出更简洁，可读，易维护的代码。
+
+生产的数据放入的中间容器（Map，List，Queue等）中供消费者取用
+
+经典题目：生产消费者面试提（wait/notify实现）
+* 生产线加工生产汽车；
+* 4s店存放生产的汽车，最多存放4量汽车，如果达到4量就停止生产；
+* 消费者在4s店购买汽车，如果4s店没有库存，则消费者需等待购买；
+public class Main{
+    private static int CAR_NAME = 1;
+    
+    public static void main(String[]args){
+        Car4s car4s = new Car4s();
+        new Thread(new Provider(car4s)).start;
+        new Thread(new Customer(car4s)).start;
+    }
+    //消费者
+    static class Customer implements Runnable{
+        private Car4s car4s;
+        public Customer(Car4s car4s){
+            this.car4s = car4s;
+        }
+        @override
+        public void run(){
+            while(true){
+                synchronized(car4s){
+                    if(car4s.getCarQueue().size() > 0){
+                        //消费
+                        Car car = car4s.getCarQueue().poll(car);
+                        System.out.println("消费汽车===>"car.getName());
+                        //无库存开始唤醒生产者
+                        car4s.notifyAll();
+                    }else{
+                        //停止消费
+                        try{
+                            car4s.wait();
+                        }catch(InterruptedException e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    //生产者
+    static class Provider implements Runnable{
+        private Car4s car4s;
+        public Provider(Car4s car4s){
+            this.car4s = car4s;
+        }
+        @override
+        public void run(){
+            while(true){
+                synchronized(car4s){
+                    if(car4s.getCarQueue().size() < 4){
+                        //生产
+                        Car car = new Car();
+                        car.setName(CAR_NAME+"");
+                        car4s.getCarQueue().push(car);
+                        CAR_NAME++;
+                        System.out.println("生产汽车===>"car.getName());
+                        //有库存开始唤醒消费者
+                        car4s.notifyAll();
+                    }else{
+                        //停止生产
+                        try{
+                            car4s.wait();
+                        }catch(InterruptedException e){
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    //4s店
+    static class Car4s{
+        private Queue<Car> carQueue = new LinkedList<>();
+        //getter/setter
+    }
+    //车
+    static class Car{
+        private String name;
+        //getter/setter
+    }
+}
