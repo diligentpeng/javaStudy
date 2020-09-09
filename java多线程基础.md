@@ -114,4 +114,5 @@ Callable可以实现有返回值的线程（了解即可）
 
 
 ## 2.3：线程的状态
-![线程状态图]（https://github.com/diligentpeng/javaStudy/blob/master/images/ThreadStatus.PNG）
+
+![线程状态图](https://github.com/diligentpeng/javaStudy/blob/master/images/ThreadStatus.PNG)
