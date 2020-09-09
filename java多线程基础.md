@@ -157,13 +157,15 @@ public static void main(String [] args){
  * Thread.MIN_PRIORITY 1
  * Thread.MAX_PRIORITY 10
  * Thread.NORM_PRIORITY 5
+ * 不在1-10之间会抛出throw new IllegalArgumentException（）;
  
-**线程对象通过setPriority()来设置线程优先级。其值默认是5**
+**优先级的设置建议在start（）调度前**
+**线程对象通过setPriority()来设置线程优先级。其值默认是5，提高线程的优先级是改善线程获取时间片的几率，优先级低意味着获取调度的概率低，并不是优先级低就不会被调用了，这都是看cpu的调度**
 
 ### 线程常用API
 
 |常用线程api方法||
-|--|--|
+|--|---|
 |start()|启动线程|
 |getID()|获取当前线程ID Thread-编号 该编号从0开始|
 |getName()|获取当前线程的名称|
@@ -174,7 +176,17 @@ public static void main(String [] args){
 |isInterrupted()|测试线程是否已经中断,没有调用interrupt()返回false，否则返回true|
 |interrupt()|	线程中断，代替stop()|
 |Thread.currentThread()|**静态方法** 获取当前线程对象|
-|Thread.getState()|**静态方法** 	State为Thread的内部成员枚举类，获取线程的状态,对应线程的生命周期，可以使用Thread.Stata 对象名 接受返回的Stata对象|
+|Thread对象.getState()|State为Thread的内部成员枚举类，获取线程的状态,对应线程的生命周期，可以使用Thread.Stata 对象名 接受当前线程对象返回的Stata对象|
+|**常用线程构造函数**||
+|Thread()|分配一个新的Thread对象|
+|Thread(String name)|分配一个新的Thread对象，具有指定的name正如其名|
+|Thread(Runnable r)|分配一个新的Thread对象|
+|Thread(Runnable r,String name)|分配一个新的Thread对象|
+
+
+![重写线程的stop方法](https://github.com/diligentpeng/javaStudy/blob/master/images/stopThread.JPG)
+
+
 ## 2.4：线程的状态
 
 ![线程状态图](https://github.com/diligentpeng/javaStudy/blob/master/images/ThreadStatus.PNG)
@@ -188,12 +200,11 @@ public static void main(String [] args){
  * BLOCKED 程序加锁，等待获取锁的线程的状态
  * WAITING 调用wait()线程的状态，调用notify()唤醒
  * TIMED_WAITING 调用sleep()方法状态
- * TERMINATED run()执行完毕，进入销毁状态
- 
- 
+ * TERMINATED run()执行完毕，进入销毁状态    
+ **死亡之后的线程不能再次启动（同一个线程不能启动两次）**
  ![线程状态转换](https://github.com/diligentpeng/javaStudy/blob/master/images/Thread_state3.jpg)
  
  
  
- ![重写线程的stop方法](https://github.com/diligentpeng/javaStudy/blob/master/images/stopThread.JPG)
+
 
