@@ -274,7 +274,7 @@ class ThreadJoinTest1 extends Thread{
 当run方法执行完后，线程就会退出。但有时run方法是永远不会结束的，如在服务端程序中使用线程进行监听客户端请求，或是其他的需要循环处理的任务。
 
 在这种情况下，一般是将这些任务放在一个循环中，如while循环。如果想使while循环在某一特定条件下退出，最直接的方法就是设一个boolean类型的标志，并通过设置这个标志为true或false来控制while循环是否退出。  
-···java
+```java
 public class test1 {
 
     public static volatile boolean exit =false;  //退出标志
@@ -303,7 +303,7 @@ public class test1 {
     }
 }
 
-···
+```
 * 2：interrupted() 和 isInterrupted()来中断线程　
 
 Thread.interrupt()方法: 作用是中断线程。将会设置该线程的中断状态位，即设置为true，中断的结果线程是死亡、还是等待新的任务或是继续运行至下一步，就取决于这个程序本身。线程会不时地检测这个中断标示位，以判断线程是否应该被中断（中断标示值是否为true）。它并不像stop方法那样会中断一个正在运行的线程  　
@@ -378,10 +378,21 @@ class HelloThread extends Thread{
 # 三：并发编程之线程安全
 ## 3.1线程安全问题：
 ```
-一：出现原因：
+出现原因：
 当我们使用多个线程访问同一资源的时候，且多个线程中对资源有写的操作，就容易出现线程安全问题。
+```
+## 3.2 解决线程安全问题
+### 3.2.1 使用同步代码块或同步方法synchronized
+**synchronized的基本原理**
+sychronized是JVM底层帮助实现的，JVM是通过进入、退出对象监视器（Monitor）来实现对方法、同步代码块的同步的。
 
-二：解决线程安全问题的一种方案：使用同步代码块
+具体实现是在编译之后在同步方法调用前加入一个monitor.enter指令，在退出方法和异常处插入monitor.exit的指令。
+
+其本质就是对一个对象监视器（Monitor）进行获取，而这个获取过程具有排他性从而达到了同一时刻只能一个线程访问的目的。
+
+而对于没有获取到锁的线程将会阻塞到方法入口处，直到获取锁的线程monitor.exit之后才能尝试继续获取锁
+```
+使用同步代码块:
     格式：synchronized（锁对象）{
         可能出现线程安全问题的代码（访问共享数据的代码）
     }
@@ -390,6 +401,186 @@ class HelloThread extends Thread{
         2：但是必须保证多个线程使用的锁对象是同一个
         3：锁对象的作用：把同步代码块锁住，只让一个线程在同步代码块中执行
         4：在任何时候,最多允许一个线程拥有同步锁（锁对象）,谁拿到锁就进入代码块,其他的线程只能在外等着
-        5：同步中的进程，没有执行完毕不会释放锁（归还锁对象），而同步外的线程没有锁就会进入堵塞状态，等待获得锁对象，就进入不了同步代码块
+        5：同步中的线程，没有执行完毕不会释放锁（归还锁对象），而同步外的线程没有锁就会进入堵塞状态，等待获得锁对象，就进入不了同步代码块
         6：缺点：频繁的判断锁，获得锁，释放锁，程序的效率会变低
 ```
+
+例子：
+```java
+    class Station implements Runnable {
+        //定义一个多个线程共享的数据
+        private int ticket = 10;
+
+        //创建一个锁对象
+        Object obj = new Object();
+
+        //设置线程任务：买票
+
+        @Override
+        public void run() {
+            //窗口 永远开启
+            while (true) {
+                //同步代码块
+                synchronized (obj) {
+                    if (ticket > 0) {//有票 可以卖
+                        // 出票操作
+                        try {
+                            Thread.sleep(1000); // 使用sleep模拟一下出票时间
+                        } catch (InterruptedException e) {
+                            //TODO Auto‐generated catch block
+                            e.printStackTrace();
+                        }
+                        //获取当前线程对象的名字
+                        String name = Thread.currentThread().getName();
+                        System.out.println(name + "正在卖:" + ticket--);
+                    }
+                    else return;
+                }
+            }
+        }
+    }
+
+    public class xianchengSafe {
+        public static void main(String[] args) {
+            //创建RunnableImpl接口的实现类对象
+            Station run =new Station();
+
+            //创建Thread类对象，构造方法中传递Runnable接口的实现类对象
+            Thread t0 = new Thread(run,"窗口一");
+            Thread t1 = new Thread(run,"窗口二");
+            Thread t2 = new Thread(run,"窗口三");
+
+            //调用start方法开启多线程
+            t0.start();
+            t1.start();
+            t2.start();
+        }
+    }
+
+```
+```
+使用synchronized修饰的方法,就叫做同步方法,保证A线程执行该方法的时候,其他线程只能在方法外 等着
+使用步骤：
+    1：把访问了共享数据的代码抽取出来，放到一个方法中
+    2：在方法上添加synchronized修饰符
+       格式：public synchronized void method(){ 可能会产生线程安全问题的代码 }
+    3：同步方法也会把方法内部的代码锁住，只让一个线程执行：
+       此时同步方法的锁对象就是实现类对象 new RunnableImpl（）：也就是this
+
+    4；对于非static方法,同步锁就是this。
+       对于static方法（优先于new 对象）,我们使用当前方法所在类的字节码对象(类名.class)。
+```
+```java
+    class RunnableImpl2 implements Runnable {
+        //定义一个多个线程共享的数据
+        private int ticket = 10;
+
+        //定义一个同步方法
+        public synchronized void payTicked(){
+            if (ticket > 0) {//有票 可以卖
+                // 出票操作
+                try {
+                    Thread.sleep(1000); // 使用sleep模拟一下出票时间
+                } catch (InterruptedException e) {
+                    //TODO Auto‐generated catch block
+                    e.printStackTrace();
+                }
+                //获取当前线程对象的名字
+                String name = Thread.currentThread().getName();
+                System.out.println(name + "正在卖:" + ticket--);
+            }
+            else return;
+        }
+
+        //设置线程任务：买票
+        @Override
+        public void run() {
+            //窗口 永远开启
+            while (true) {
+                payTicked();
+            }
+        }
+    }
+
+    public class xianchengSafe {
+        public static void main(String[] args) {
+            //创建RunnableImpl接口的实现类对象
+            RunnableImpl2 run =new RunnableImpl2();
+
+            //创建Thread类对象，构造方法中传递Runnable接口的实现类对象
+            Thread t0 = new Thread(run);
+            Thread t1 = new Thread(run);
+            Thread t2 = new Thread(run);
+
+            //调用start方法开启多线程
+            t0.start();
+            t1.start();
+            t2.start();
+        }
+    }
+```
+
+```java
+static class A{
+    public  static Object o1 = new Object();
+    public static void main(String[] args){
+        new A().fun1();
+        A.fun2();
+    }
+    public synchronized void fun1(){
+        //当前对象this作为锁对象
+        //同步代码块
+    }
+    public synchronized static void fun2(){
+        //A.Class对象作为锁对象
+        //同步代码块
+    }
+    
+    //fun3和fun4用同一个锁对象才不能被同时调用
+    void fun3(){
+        sychronized(o1){
+            //do something
+        }
+    }
+    
+    void fun4(){
+        sychronized(o1){
+            //do something
+        }
+    }
+}
+```
+**线程死锁**
+
+![产生死锁的四个必要条件](https://github.com/diligentpeng/javaStudy/blob/master/images/deadLock4.JPG)
+
+public class Main{
+    public static void main(String[] args){
+        Object o1 = new Object();//锁1
+        Object o2 = new Object();//锁2
+        new Thread(()->{
+            synchronized(o1){
+                try{
+                    Thread.sleep(1000);
+                    synchronized(o2){
+                        System.out.print("线程1执行")
+                    }
+                }catch(InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+        new Thread(()->{
+            synchronized(o2){
+                try{
+                    Thread.sleep(1000);
+                    synchronized(o1){
+                        System.out.print("线程2执行")
+                    }
+                }catch(InterruptedException e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+}
