@@ -111,7 +111,60 @@ public class RunnableDemo01{
 ```
 * 第三种：通过ExcutorService和Callable实现有返回值的线程；
 Callable可以实现有返回值的线程（了解即可） 
+* 第四种：使用线程池
+```
+线程池：其实就是一个容纳多个线程的容器，其中的线程可以反复使用，省去了频繁创建线程对象的操作，
+        无需反复创建线程而消耗过多资源。（一般使用LinkedList <Thread> ,HashMap）
 
+当程序第一次启动的时候，创建多个线程，保存到一个集合中，当我们想要使用线程的时候，就可以
+从集合中取出线程使用Thread t = linked.removeFirst();
+当我们使用完毕线程，需要把线程归还到线程池：list.add(t);  linked.addList(t);
+
+在JDK1.5之后，JDK内置了线程池，我们可以直接使用
+
+线程池的使用
+
+    1: java.util.concurrent.Executors:用来生成线程池
+    2：方法：public static ExecutorService newFixedThreadPool(int nThreads) ：
+        返回线程池对象。(创建的是有界线程池,也就是池中的线程个数可以指定最大数量)
+        参数：int nThreads：创建线程池中包含的线程数量
+        返回值： ExecutorService接口，返回的是ExecutorService接口的实现类对象，可以使用ExecutorService接口来接收
+
+    3：java.util.concurrent.Executors：线程池接口,用来从线程池中获取线程，调用start方法，执行线程任务
+        public Future<?> submit(Runnable task) :获取线程池中的某一个线程对象，并执行
+        void shutDown（）：关闭/销毁线程池的方法
+
+    4：使用步骤
+        1：使用线程池工厂类Executors里面的静态方法newFixedThreadPool(int nThreads)，生产一个指定线程数量的线程池
+        2：创建一个类，实现Runnable接口，重写run方法，设置线程任务
+        3：调用ExecutorService中的方法submit，传递线程任务（实现类），开启线程，执行run方法
+        4：调用ExecutorService中的方法shutDown（）销毁线程池
+```
+```java
+ // 2：创建一个类，实现Runnable接口，重写run方法，设置线程任务
+class RunnableImpl3 implements Runnable{
+     @Override
+     public void run() {
+         System.out.println(Thread.currentThread().getName()+"创建了一个新的线程执行");
+     }
+ }
+public class xianchengPool {
+    public static void main(String[] args) {
+        // 1：使用线程池工厂类Executors里面的静态方法newFixedThreadPool(int nThreads)，生产一个指定线程数量的线程池
+        ExecutorService es = Executors.newFixedThreadPool(2);
+
+        //3：调用ExecutorService中的方法submit，传递线程任务（实现类），开启线程，执行run方法
+        es.submit(new RunnableImpl3());
+        es.submit(new RunnableImpl3());
+        es.submit(new RunnableImpl3());
+        //线程池会一直开启，使用完了线程，回自动把线程归还到线程池，线程可以继续使用
+        es.submit(new RunnableImpl3());
+
+        //关闭线程池
+        es.shutdown();
+    }
+}
+```
 ## 用户线程与守护线程
 java分两种线程：用户线程和守护线程。  
 > 正常的线程都是用户线程（main线程，自己开启的线程等）
@@ -553,7 +606,7 @@ static class A{
 **线程死锁**
 
 ![产生死锁的四个必要条件](https://github.com/diligentpeng/javaStudy/blob/master/images/deadLock4.JPG)
-
+```java
 public class Main{
     public static void main(String[] args){
         Object o1 = new Object();//锁1
@@ -584,3 +637,117 @@ public class Main{
         }).start();
     }
 }
+```
+### 3.2.2 使用Lock锁(ReentrantLock类：可重用锁)
+```
+我们知道Java语言直接提供了synchronized关键字用于加锁，但这种锁一是很重，二是获取时必须一直等待，没有额外的尝试机制。
+引入了一个高级的处理并发的java.util.concurrent包，它提供了大量更高级的并发功能，能大大简化多线程程序的编写。
+ java.util.concurrent.locks包提供的ReentrantLock(可重入锁)用于替代synchronized加锁
+ java.util.concurrents.Locks.Lock :接口提供了比synchronized代码块和synchronized方法更广泛的锁定操作
+
+ Lock 接口中的方法：
+      public void lock() :加同步锁。
+      public void unlock() :释放同步锁
+  java.util.concurrents.Locks.ReentrantLock implements Lock接口
+
+  使用步骤：
+      1：在成员位置创建一个ReentrantLock对象（可使用多态）
+      2：在可能出现安全问题的代码前调用Lock接口的方法lock获得锁
+      3：在可能出现安全问题的代码后调用Lock接口的方法unlock释放锁
+```
+```java
+//范式
+Lock lock = new ReentrantLock();
+lock.lock();
+try{
+    //doSomething...
+}finally{
+    lock.unlock();
+}
+```
+```java
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+class RunnableImpl2 implements Runnable {
+    //定义一个多个线程共享的数据
+    private int ticket = 10;
+
+    //1：在成员位置创建一个ReentrantLock对象（可使用多态）
+    Lock l = new ReentrantLock();
+    //定义一个同步方法
+
+    //设置线程任务：买票
+    @Override
+    public void run() {
+        //窗口 永远开启
+        while (true) {
+            // 2：在可能出现安全问题的代码前调用Lock接口的方法lock获得锁
+            l.lock();
+            if (ticket > 0) {//有票 可以卖
+                // 出票操作
+                try {
+                    Thread.sleep(1000); // 使用sleep模拟一下出票时间
+                    //获取当前线程对象的名字
+                    String name = Thread.currentThread().getName();
+                    System.out.println(name + "正在卖:" + ticket--);
+                } catch (InterruptedException e) {
+                    //TODO Auto‐generated catch block
+                    e.printStackTrace();
+                }finally {
+                    //3：在可能出现安全问题的代码后调用Lock接口的方法unlock释
+                    l.unlock(); //无论代码是否出现异常，都释放锁
+                }
+
+            } else {l.unlock();return;}
+        }
+
+    }
+}
+
+public class ThreadSafe {
+    public static void main(String[] args) {
+        //创建RunnableImpl接口的实现类对象
+        RunnableImpl2 run = new RunnableImpl2();
+
+        //创建Thread类对象，构造方法中传递Runnable接口的实现类对象
+        Thread t0 = new Thread(run);
+        Thread t1 = new Thread(run);
+        Thread t2 = new Thread(run);
+
+        //调用start方法开启多线程
+        t0.start();
+        t1.start();
+        t2.start();
+    }
+}
+```
+*  ReentrantLock尝试获取锁lock.tryLock()
+因为synchronized是Java语言层面提供的语法，所以我们不需要考虑异常，而ReentrantLock是Java代码实现的锁，我们就必须先获取锁，然后在finally中正确释放锁。
+
+顾名思义，ReentrantLock是可重入锁，它和synchronized一样，一个线程可以多次获取同一个锁。
+
+和synchronized不同的是，ReentrantLock可以尝试获取锁：
+```java
+if(lock.tryLock(1,TimeUnit.SECONDS)){
+    try{
+        ...
+    }finally{
+        lock.unlock;
+    }
+}
+```
+上述代码在尝试获取锁的时候，最多等待1秒。如果1秒后仍未获取到锁，tryLock()返回false，程序就可以做一些额外处理，而不是无限等待下去。
+
+所以，使用ReentrantLock比直接使用synchronized更安全，线程在tryLock()失败的时候不会导致死锁。
+
+ **读写锁**
+ ReentrantLock和synchonrized只允许一个线程进入临界代码区域，但是有时候这样效率过低。
+
+**当读数据时候可以有多个线程同时获取读锁，当有写操作时只能一个线程获取锁。**
+
+|	|读	|写|
+|--|--|--|
+|读	|允许	|不允许|
+|	写|	不允许|不允许|
+		
