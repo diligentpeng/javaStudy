@@ -51,7 +51,7 @@
 
 * 第一种：继承Thread
 Thread类实现了Runnable接口，并定义了操作线程的一些方法。创建一个类并继承Thread接口，然后实例化线程对象并调用start方法启动线程。结果是两个线程并发的运行:当前线程（main线程）和另一个线程（创建的新线程，执行其run方法）。start方法为一个native方法，通过在操作系统上启动一个新线程，并最终执行run方法来启动一个线程。
-```
+```java
 
 //step1:通过继承Thread类创建NewThread线程(覆盖run()方法））)
 public class NewThread extends Thread {
@@ -85,7 +85,7 @@ public class NewThread extends Thread {
 * 继承Thread类：子类对象.strat();
 * 实现Thread接口：Thread对象.strat(实现类对象)
 * 实现Thread接口的好处：避免了单继承的局限性，灵活方便，方便同一个对象被多个线程使用
-```
+```java
 class MyThread implements Runnable{ // 实现Runnable接口，作为线程的实现类 
      private String name ;       // 表示线程的名称 
      public MyThread(String name){ 
@@ -116,3 +116,17 @@ Callable可以实现有返回值的线程（了解即可）
 ## 2.3：线程的状态
 
 ![线程状态图](https://github.com/diligentpeng/javaStudy/blob/master/images/ThreadStatus.PNG)
+
+**线程有六种状态（生命周期）：NEW(新建)，Runnable(可运行)，Blocked(锁阻塞)，Waiting(无限等待)，Timed Waiting(计时等待)，Teminated(被终止)**
+
+ * NEW new Thread()，尚未执行；
+ * RUNNABLE start()就绪后抢夺时间片，正在执行run()
+ * BLOCKED 程序加锁，等待获取锁的线程的状态
+ * WAITING 调用wait()线程的状态，调用notify()唤醒
+ * TIMED_WAITING 调用sleep()方法状态
+ * TERMINATED run()执行完毕，进入销毁状态
+ 
+ ![线程状态](https://github.com/diligentpeng/javaStudy/blob/master/images/Thread_state3.jpg)
+ 
+ ![重写线程的stop方法](https://github.com/diligentpeng/javaStudy/blob/master/images/stopThread.JPG)
+
