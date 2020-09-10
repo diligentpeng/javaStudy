@@ -257,6 +257,7 @@ public static void main(String [] args){
  * TIMED_WAITING 调用sleep()方法状态
  * TERMINATED run()执行完毕，进入销毁状态    
  **死亡之后的线程不能再次启动（同一个线程不能启动两次）**
+ 
  ![线程状态转换](https://github.com/diligentpeng/javaStudy/blob/master/images/Thread_state3.jpg)
  
 ## 2.5：线程常用API
